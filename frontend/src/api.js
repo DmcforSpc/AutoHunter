@@ -210,6 +210,20 @@ function qs(params = {}) {
   return out ? `?${out}` : "";
 }
 
+async function proxyImport(text, file) {
+  const headers = {};
+  const token = apiToken();
+  if (token) headers["X-Autohunter-Token"] = token;
+  const body = new FormData();
+  if (text) body.append("text", text);
+  if (file) body.append("file", file, file.name || "proxies.txt");
+  const res = await fetch(base + "/api/proxy/import", { method: "POST", headers, body });
+  const resText = await res.text();
+  if (res.status === 403) throw new Error("只读令牌不允许此操作");
+  if (!res.ok) throw new Error(`${res.status} ${resText}`);
+  try { return JSON.parse(resText); } catch { throw new Error(resText || "导入失败"); }
+}
+
 async function downloadFile(method, url) {
   const headers = {};
   const token = apiToken();
@@ -352,6 +366,13 @@ export const api = {
   runtimeLogStats: () => req("GET", "/api/runtime-logs/stats"),
   runtimeLogs: (level, agent, q, opts = {}) =>
     req("GET", `/api/runtime-logs${qs({ level, agent, q, ...opts })}`),
+  proxyList: () => req("GET", "/api/proxy"),
+  proxyAdd: (data) => req("POST", "/api/proxy", data),
+  proxyUpdate: (id, data) => req("PUT", `/api/proxy/${encodeURIComponent(id)}`, data),
+  proxyDelete: (id) => req("DELETE", `/api/proxy/${encodeURIComponent(id)}`),
+  proxyImport: (text, file) => proxyImport(text, file),
+  proxyTest: (data) => req("POST", "/api/proxy/test", data),
+  proxyToggle: (enabled) => req("PUT", "/api/proxy/toggle", { enabled }),
   // 一键更新
   checkUpdate: () => req("GET", "/api/update/check"),
   runUpdate: () => req("POST", "/api/update/run"),

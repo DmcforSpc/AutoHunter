@@ -131,6 +131,12 @@
         <sub><b>Windsweet97</b></sub>
       </a><br /><sup>Helper</sup>
     </td>
+    <td align="center" width="100">
+      <a href="https://github.com/wr0x00">
+        <img src="https://avatars.githubusercontent.com/u/86941613?v=4&s=128" width="72" height="72" alt="wr0x00" /><br />
+        <sub><b>wr0x00</b></sub>
+      </a><br /><sup>Proxy Pool</sup>
+    </td>
   </tr>
 </table>
 
