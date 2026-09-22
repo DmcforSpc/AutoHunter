@@ -1,5 +1,8 @@
 """代理池服务：挖洞出口 IP 管理 + 被封后按需轮换。
 
+提案与设置页来自 wr0x00：https://github.com/wr0x00
+（https://github.com/StanleyNull/AutoHunter/pull/60）
+
 设计（v2，面向 WAF 封禁对抗）：
 - 配置存 SystemSettings.proxy JSON 列（enabled + proxies[]），启动时加载进内存快照。
 - acquire(exclude_ids)：round-robin 轮转分配，跳过停用/冷却中/已被该目标用废的。
