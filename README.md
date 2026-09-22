@@ -120,12 +120,17 @@
       </a><br /><sup>List Pinning</sup>
     </td>
     <td align="center" width="100">
-  <a href="https://github.com/Windsweet97">
-    <img src="https://github.com/Windsweet97.png" width="72" height="72" alt="Windsweet97" /><br />
-    <sub><b>Windsweet97</b></sub>
-  </a><br />
-  <sup>Helper</sup>
-</td>
+      <a href="https://github.com/vtaskstar">
+        <img src="https://avatars.githubusercontent.com/u/7687111?v=4&s=128" width="72" height="72" alt="vtaskstar" /><br />
+        <sub><b>vtaskstar</b></sub>
+      </a><br /><sup>LLM Headers</sup>
+    </td>
+    <td align="center" width="100">
+      <a href="https://github.com/Windsweet97">
+        <img src="https://avatars.githubusercontent.com/u/173699449?v=4&s=128" width="72" height="72" alt="Windsweet97" /><br />
+        <sub><b>Windsweet97</b></sub>
+      </a><br /><sup>Helper</sup>
+    </td>
   </tr>
 </table>
 
