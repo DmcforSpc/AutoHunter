@@ -19,7 +19,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
+
+from app.web_cache import HTML_CACHE, HashedAssetFiles
 
 from app.agent_runtime import (
     AGENT_THREAD_POOL_SIZE,
@@ -266,13 +267,13 @@ async def favicon_ico():
     return Response(content=FAVICON_SVG, media_type="image/svg+xml")
 
 
-# Vite 资源目录（/assets/*.js|css）
+# Vite 资源目录（/assets/*.js|css）。文件名带内容哈希，可长期缓存。
 if (WEB_DIR / "assets").exists():
-    app.mount("/assets", StaticFiles(directory=str(WEB_DIR / "assets")), name="assets")
+    app.mount("/assets", HashedAssetFiles(directory=str(WEB_DIR / "assets")), name="assets")
 
 
 @app.get("/")
 async def index():
     if INDEX_FILE.exists():
-        return FileResponse(str(INDEX_FILE))
+        return FileResponse(str(INDEX_FILE), headers={"Cache-Control": HTML_CACHE})
     return {"msg": "前端未构建，请运行 vite build 或使用 Docker 镜像"}
