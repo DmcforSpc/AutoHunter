@@ -1061,22 +1061,49 @@ async function loadMoreSubmit() {
   await loadSubmit({ reset: false });
 }
 
-async function fetchAllSubmitReports() {
+async function fetchPagedFindingList(loader) {
   const reports = [];
   let offset = 0;
   for (;;) {
-    const res = await api.submitList(props.id, submittedFilter.value, undefined, {
-      compact: false,
-      limit: EXPORT_PAGE_SIZE,
-      offset,
-    });
+    const res = await loader(offset);
     const rows = Array.isArray(res) ? res : (res.items || []);
     reports.push(...rows);
-    if (Array.isArray(res) || !res.has_more) break;
+    if (!rows.length || Array.isArray(res) || !res.has_more) break;
     offset += rows.length;
     await new Promise((resolve) => requestAnimationFrame(resolve));
   }
   return reports;
+}
+
+async function fetchAllSubmitReports() {
+  return fetchPagedFindingList((offset) => api.submitList(props.id, submittedFilter.value, undefined, {
+    compact: false,
+    limit: EXPORT_PAGE_SIZE,
+    offset,
+  }));
+}
+
+async function fetchAllReviewReports() {
+  // 走 review-queue 已有 compact/limit/offset：默认裸 list 仍给看板用，导出才拉全字段。
+  return fetchPagedFindingList((offset) => api.reviewQueue(props.id, undefined, {
+    compact: false,
+    limit: EXPORT_PAGE_SIZE,
+    offset,
+  }));
+}
+
+function downloadNamedFile(filename, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function joinReportMarkdown(reports) {
+  return reports.map((f) => buildReportMd(f)).join("\n\n---\n\n");
 }
 
 async function copyAll() {
@@ -1085,8 +1112,7 @@ async function copyAll() {
   try {
     toast("正在生成全部 Markdown...");
     const reports = await fetchAllSubmitReports();
-    const md = reports.map((f) => buildReportMd(f)).join("\n\n---\n\n");
-    await copyText(md);
+    await copyText(joinReportMarkdown(reports));
     toast(`已复制 ${reports.length} 份报告`);
   } catch {
     toast("复制失败，请使用导出按钮");
@@ -1100,14 +1126,11 @@ async function exportAll() {
   try {
     toast("正在生成 Markdown 文件...");
     const reports = await fetchAllSubmitReports();
-    const md = reports.map((f) => buildReportMd(f)).join("\n\n---\n\n");
-    const blob = new Blob([md], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `autohunter-${props.id.slice(0, 8)}-submit.md`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);   // 释放 object URL，避免内存泄漏
+    downloadNamedFile(
+      `autohunter-${props.id.slice(0, 8)}-submit.md`,
+      joinReportMarkdown(reports),
+      "text/markdown",
+    );
     toast(`已导出 ${reports.length} 份报告`);
   } finally {
     bulkWorking.value = false;
@@ -1137,15 +1160,96 @@ async function exportEdusrcAll() {
   try {
     toast("正在生成 reports.json...");
     const reports = await fetchAllSubmitReports();
-    const text = JSON.stringify(edusrcReports(reports), null, 2);
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `autohunter-${props.id.slice(0, 8)}-edusrc-reports.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);   // 释放 object URL，避免内存泄漏
+    downloadNamedFile(
+      `autohunter-${props.id.slice(0, 8)}-edusrc-reports.json`,
+      JSON.stringify(edusrcReports(reports), null, 2),
+      "application/json",
+    );
     toast(`已导出 ${reports.length} 份 EduSRC JSON`);
+  } finally {
+    bulkWorking.value = false;
+  }
+}
+
+async function copyReviewAll() {
+  if (bulkWorking.value) return;
+  bulkWorking.value = true;
+  try {
+    toast("正在生成全部 Markdown...");
+    const reports = await fetchAllReviewReports();
+    if (!reports.length) {
+      toast("没有待复审报告");
+      return;
+    }
+    await copyText(joinReportMarkdown(reports));
+    toast(`已复制 ${reports.length} 份待复审报告`);
+  } catch {
+    toast("复制失败，请使用导出按钮");
+  } finally {
+    bulkWorking.value = false;
+  }
+}
+
+async function exportReviewAll() {
+  if (bulkWorking.value) return;
+  bulkWorking.value = true;
+  try {
+    toast("正在生成 Markdown 文件...");
+    const reports = await fetchAllReviewReports();
+    if (!reports.length) {
+      toast("没有待复审报告");
+      return;
+    }
+    downloadNamedFile(
+      `autohunter-${props.id.slice(0, 8)}-review.md`,
+      joinReportMarkdown(reports),
+      "text/markdown",
+    );
+    toast(`已导出 ${reports.length} 份待复审报告`);
+  } catch (e) {
+    toast(`导出失败：${e.message || e}`);
+  } finally {
+    bulkWorking.value = false;
+  }
+}
+
+async function copyReviewEdusrcAll() {
+  if (bulkWorking.value) return;
+  bulkWorking.value = true;
+  try {
+    toast("正在生成全部 EduSRC JSON...");
+    const reports = await fetchAllReviewReports();
+    if (!reports.length) {
+      toast("没有待复审报告");
+      return;
+    }
+    await copyText(JSON.stringify(edusrcReports(reports), null, 2));
+    toast(`已复制 ${reports.length} 份待复审 EduSRC JSON`);
+  } catch {
+    toast("复制失败，请使用导出 reports.json");
+  } finally {
+    bulkWorking.value = false;
+  }
+}
+
+async function exportReviewEdusrcAll() {
+  if (bulkWorking.value) return;
+  bulkWorking.value = true;
+  try {
+    toast("正在生成 reports.json...");
+    const reports = await fetchAllReviewReports();
+    if (!reports.length) {
+      toast("没有待复审报告");
+      return;
+    }
+    downloadNamedFile(
+      `autohunter-${props.id.slice(0, 8)}-review-edusrc.json`,
+      JSON.stringify(edusrcReports(reports), null, 2),
+      "application/json",
+    );
+    toast(`已导出 ${reports.length} 份待复审 EduSRC JSON`);
+  } catch (e) {
+    toast(`导出失败：${e.message || e}`);
   } finally {
     bulkWorking.value = false;
   }
@@ -1723,6 +1827,36 @@ function parseEventTs(ts) {
     <!-- 复审队列 -->
     <div v-show="tab === 'review'" class="list-panel">
       <div class="list-head"><span>复审队列</span><small>AI 采纳后等待人工裁决</small></div>
+      <div class="submit-toolbar">
+        <small v-if="reviewCount" class="muted">待复审 {{ reviewCount }} 条 · 导出全部，不受搜索框影响</small>
+        <span class="grow"></span>
+        <button
+          type="button"
+          title="复制当前任务全部待复审报告（完整 Markdown，含证据链）"
+          @click="copyReviewAll"
+          :disabled="!reviewCount || bulkWorking"
+        >复制全部 Markdown</button>
+        <button
+          type="button"
+          title="导出当前任务全部待复审报告为 .md"
+          @click="exportReviewAll"
+          :disabled="!reviewCount || bulkWorking"
+        >导出 .md</button>
+        <button
+          v-if="!isEnterpriseTask"
+          type="button"
+          title="复制 EduSRC 油猴脚本可用的 reports.json"
+          @click="copyReviewEdusrcAll"
+          :disabled="!reviewCount || bulkWorking"
+        >复制 EduSRC JSON</button>
+        <button
+          v-if="!isEnterpriseTask"
+          type="button"
+          title="导出 EduSRC 油猴脚本可用的 reports.json"
+          @click="exportReviewEdusrcAll"
+          :disabled="!reviewCount || bulkWorking"
+        >导出 reports.json</button>
+      </div>
       <div v-if="!queue.length" class="empty">没有待复审的漏洞（AI 采纳后会进这里）</div>
       <div v-else-if="!filteredQueue.length" class="empty">没有匹配当前关键词的复审漏洞</div>
       <div v-for="f in filteredQueue" :key="f.id" class="result-row" @click="openReview(f.id)">

@@ -281,7 +281,9 @@ export const api = {
   // 任务置顶：单条 / 批量，仅 full 令牌可写（后端中间件拦 observer/readonly）。
   taskTop: (id, isTop) => req("PATCH", `/api/tasks/${id}/top`, { is_top: !!isTop }),
   taskBatchTop: (ids, isTop) => req("PATCH", "/api/tasks/batch/top", { ids, is_top: !!isTop }),
-  reviewQueue: (id, q) => req("GET", `/api/tasks/${id}/review-queue${qs({ q })}`),
+  // 第三参 opts 可选（compact/limit/offset）；缺省与旧调用完全一致：裸 list、全字段。
+  reviewQueue: (id, q, opts = {}) =>
+    req("GET", `/api/tasks/${id}/review-queue${qs({ q, ...opts })}`),
   submitList: (id, submitted, q, opts = {}) =>
     req("GET", `/api/tasks/${id}/submit-list${qs({ submitted, q, ...opts })}`),
   rejectedList: (id, q) => req("GET", `/api/tasks/${id}/rejected${qs({ q })}`),
