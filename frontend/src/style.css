@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+/* 不用 Google Fonts。CSS @import 会挡住首屏，国内经常超时。缺字走后面的系统字体。 */
 
 /* ============================================================
    AutoHunter — 作战终端 / product register
