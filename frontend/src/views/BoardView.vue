@@ -1383,6 +1383,23 @@ const cacheHitRate = computed(() => {
   return Math.round((hit / base) * 100);
 });
 const isEnterpriseTask = computed(() => task.value?.src_type === "enterprise");
+const autoKillsweep = computed(() => task.value?.auto_killsweep !== false);
+const autoKillsweepSaving = ref(false);
+async function toggleAutoKillsweep(ev) {
+  if (readonly.value || autoKillsweepSaving.value) return;
+  const next = !!ev.target.checked;
+  autoKillsweepSaving.value = true;
+  try {
+    const updated = await api.updateTask(props.id, { auto_killsweep: next });
+    task.value = { ...task.value, ...updated, auto_killsweep: next };
+    toast(next ? "已开启：复审通过后自动通杀" : "已关闭自动通杀");
+  } catch (e) {
+    ev.target.checked = !next;
+    toast(`保存失败：${e.message || e}`);
+  } finally {
+    autoKillsweepSaving.value = false;
+  }
+}
 const taskModeName = computed(() => isEnterpriseTask.value ? "企业SRC" : "EduSRC");
 const targetSourceName = computed(() => (({
   fofa: "测绘搜集",
@@ -1900,8 +1917,15 @@ function parseEventTs(ts) {
 
     <!-- 通杀列 -->
     <div v-show="tab === 'killsweep'" class="list-panel">
-      <div class="list-head"><span>通杀列</span><small>人工通过后进入此列；失败可直接重启，不必改库回退复审</small></div>
-      <div v-if="!killsweepItems.length" class="empty">还没有通杀记录（人工复审通过后，通杀 Hunter 会自动分析同款系统，失败也会留在这里）</div>
+      <div class="list-head"><span>通杀列</span><small>{{ autoKillsweep ? "复审通过后自动分析同款系统" : "已关闭自动通杀" }}；失败可直接重启</small></div>
+      <div class="submit-toolbar">
+        <label class="inline" :title="readonly ? '只读不能改' : '关闭后，新的复审通过不再自动开通杀'">
+          <input type="checkbox" :checked="autoKillsweep" :disabled="readonly || autoKillsweepSaving" @change="toggleAutoKillsweep" />
+          复审通过后自动通杀
+        </label>
+        <span class="grow"></span>
+      </div>
+      <div v-if="!killsweepItems.length" class="empty">{{ autoKillsweep ? "还没有通杀记录。人工复审通过后会自动分析同款系统，失败也会留在这里。" : "还没有通杀记录。本任务已关闭自动通杀，复审通过只进待提交。" }}</div>
       <div v-else-if="!filteredKillsweeps.length" class="empty">没有匹配当前关键词的通杀记录</div>
       <div v-for="k in filteredKillsweeps" :key="k.id" class="killsweep-card" :class="{ open: isKillsweepOpen(k.id), failed: k.status === 'failed', running: k.status === 'analyzing' }">
         <button class="ks-summary" type="button" :aria-expanded="isKillsweepOpen(k.id)" @click="toggleKillsweep(k.id)">
