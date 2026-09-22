@@ -169,8 +169,10 @@ onMounted(load);
     <div class="proxy-toolbar">
       <label class="proxy-switch">
         <input type="checkbox" v-model="enabled" @change="onToggle" />
-        <span>启用代理池</span>
-        <small>{{ enabled ? "挖洞流量走代理，被封自动/手动换 IP" : "关闭中：全部直连" }}</small>
+        <span class="proxy-switch-copy">
+          <b>启用代理池</b>
+          <small>{{ enabled ? "挖洞流量走代理，被封自动/手动换 IP" : "关闭中：全部直连" }}</small>
+        </span>
       </label>
       <div class="proxy-actions">
         <button type="button" @click="showImport = !showImport">导入 txt / 粘贴</button>
@@ -245,8 +247,9 @@ onMounted(load);
     </table>
 
     <p class="proxy-note">
-      覆盖范围：Worker 的 http_request 与 run_shell（curl/python 等读取环境变量；nmap/sqlmap 不读 env，需各自加 --proxy）。
-      连接失败自动换下一个；被 WAF 封 IP 时 Worker 会调用 rotate_proxy 换出口并保留登录态。
+      覆盖 Worker 的 http_request 和 run_shell。连不上代理才换下一个；读超时和证书错误不换。
+      明确的 WAF 拦截页：GET/HEAD 自动换出口并重试一次，POST 等写请求只换出口、不自动重放。
+      也可由 Worker 调用 rotate_proxy，登录态会保留。不启用或没有可用代理时继续直连。
     </p>
   </div>
 </template>
@@ -254,8 +257,11 @@ onMounted(load);
 <style scoped>
 .proxy-pool { display: flex; flex-direction: column; gap: 12px; }
 .proxy-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.proxy-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.proxy-switch small { opacity: 0.65; }
+.proxy-switch { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; min-width: 0; }
+.proxy-switch input { margin-top: 2px; }
+.proxy-switch-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.proxy-switch-copy b { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.proxy-switch-copy small { font-size: 12px; line-height: 1.4; color: var(--muted); }
 .proxy-actions { display: flex; gap: 8px; }
 .proxy-actions .primary { font-weight: 600; }
 .proxy-toast { margin: 0; font-size: 13px; }
@@ -273,7 +279,8 @@ onMounted(load);
 .proxy-import-result { margin: 0; font-size: 13px; }
 .proxy-empty { opacity: 0.7; font-size: 13px; padding: 12px 0; }
 .proxy-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.proxy-table th, .proxy-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #2a2a2a); }
+.proxy-table th, .proxy-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border, #2a2a2a); vertical-align: middle; }
+.proxy-table td:nth-child(5) { text-align: center; width: 64px; }
 .proxy-table tr.off td { opacity: 0.5; }
 .proxy-badge {
   display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px;
@@ -284,6 +291,12 @@ onMounted(load);
 .proxy-row-actions { white-space: nowrap; }
 .proxy-row-actions .danger { color: var(--danger, #f87171); }
 .proxy-test-result { display: block; font-size: 11px; opacity: 0.75; }
-.proxy-note { margin: 0; font-size: 12px; opacity: 0.6; }
-@media (max-width: 720px) { .proxy-form { grid-template-columns: 1fr 1fr; } }
+.proxy-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+@media (max-width: 720px) {
+  .proxy-form { grid-template-columns: 1fr; }
+  .proxy-toolbar { align-items: stretch; }
+  .proxy-actions { width: 100%; }
+  .proxy-actions button { flex: 1; }
+  .proxy-table { display: block; overflow-x: auto; }
+}
 </style>
