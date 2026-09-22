@@ -334,8 +334,8 @@ export const api = {
   testLLM: (data) => req("POST", "/api/settings/test-llm", data),
   // 工作目录管理
   workdirStats: () => req("GET", "/api/settings/workdir/stats"),
-  workdirCleanup: (retentionDays, dryRun = true) =>
-    req("POST", `/api/settings/workdir/cleanup${qs({ retention_days: retentionDays, dry_run: dryRun })}`),
+  workdirCleanup: (retentionDays) =>
+    req("POST", `/api/settings/workdir/cleanup${qs({ retention_days: retentionDays, dry_run: false })}`),
   backupStatus: () => req("GET", "/api/backup/status"),
   backupSnapshot: () => req("POST", "/api/backup/snapshot"),
   downloadBackupExport: (includeWork = false) =>
